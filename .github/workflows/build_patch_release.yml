@@ -16,15 +16,16 @@ jobs:
       run: |
         git clone https://git.ffmpeg.org/ffmpeg.git
         cd ffmpeg
-        git checkout master   # or checkout a tag like n7.0
-
+        git checkout master   # or a tag like n7.0
 
     - name: Apply patch
+      working-directory: ffmpeg
       run: |
         curl -L 'https://patchwork.ffmpeg.org/project/ffmpeg/patch/20250401102902.89332-1-aattyy@gmail.com/raw/' -o webpdec.diff
         git apply webpdec.diff
 
     - name: Build inside Docker
+      working-directory: ffmpeg
       run: |
         docker run --rm -v $PWD:/src -w /src ubuntu:24.04 bash -ex <<'EOT'
           apt-get update
@@ -36,14 +37,14 @@ jobs:
 
     - name: Package binary
       run: |
-        tar czf ffmpeg-patched.tar.gz -C dist usr/local/bin/ffmpeg
+        tar czf ffmpeg-patched.tar.gz -C ffmpeg/dist usr/local/bin/ffmpeg
         ls -lh ffmpeg-patched.tar.gz
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: patched-$(date +'%Y%m%d')
-        release_name: "FFmpeg patched build $(date +'%Y-%m-%d')"
+        tag_name: patched-${{ github.run_number }}
+        release_name: "FFmpeg patched build ${{ github.run_number }}"
         assets: ffmpeg-patched.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
