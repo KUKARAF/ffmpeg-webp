@@ -14,8 +14,8 @@ jobs:
 
     - name: Apply patch
       run: |
-        curl -L 'https://patchwork.ffmpeg.org/patch/20250401102902.89332-1-aattyy@gmail.com/@@download' -o webpdec.patch
-        git apply webpdec.patch
+        curl -L 'https://patchwork.ffmpeg.org/project/ffmpeg/patch/20250401102902.89332-1-aattyy@gmail.com/raw/' -o webpdec.diff
+        git apply webpdec.diff
 
     - name: Build inside Docker
       run: |
