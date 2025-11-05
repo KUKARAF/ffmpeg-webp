@@ -1,0 +1,42 @@
+name: Build & Release FFmpeg Patched
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Apply patch
+      run: |
+        curl -L 'https://patchwork.ffmpeg.org/patch/20250401102902.89332-1-aattyy@gmail.com/@@download' -o webpdec.patch
+        git apply webpdec.patch
+
+    - name: Build inside Docker
+      run: |
+        docker run --rm -v $PWD:/src -w /src ubuntu:24.04 bash -ex <<'EOT'
+          apt-get update
+          apt-get install -y build-essential yasm pkg-config libwebp-dev libwebpdemux-dev
+          ./configure --enable-libwebp --enable-libwebpdec --enable-gpl --enable-nonfree
+          make -j$(nproc)
+          make install DESTDIR=/src/dist
+        EOT
+
+    - name: Package binary
+      run: |
+        tar czf ffmpeg-patched.tar.gz -C dist usr/local/bin/ffmpeg
+        ls -lh ffmpeg-patched.tar.gz
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: patched-$(date +'%Y%m%d')
+        release_name: "FFmpeg patched build $(date +'%Y-%m-%d')"
+        assets: ffmpeg-patched.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
