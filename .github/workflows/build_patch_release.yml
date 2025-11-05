@@ -14,30 +14,32 @@ jobs:
 
     - name: Clone FFmpeg
       run: |
-        git clone https://git.ffmpeg.org/ffmpeg.git
-        cd ffmpeg
-        git checkout master   # or a tag like n7.0
+        git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg-src
+        cd ffmpeg-src
+        git checkout master   # or n7.0 if you want a fixed release
 
     - name: Apply patch
-      working-directory: ffmpeg
+      working-directory: ffmpeg-src
       run: |
         curl -L 'https://patchwork.ffmpeg.org/project/ffmpeg/patch/20250401102902.89332-1-aattyy@gmail.com/raw/' -o webpdec.diff
+        ls -l webpdec.diff
         git apply webpdec.diff
+        echo "✅ Patch applied successfully"
 
     - name: Build inside Docker
-      working-directory: ffmpeg
+      working-directory: ffmpeg-src
       run: |
         docker run --rm -v $PWD:/src -w /src ubuntu:24.04 bash -ex <<'EOT'
           apt-get update
           apt-get install -y build-essential yasm pkg-config libwebp-dev libwebpdemux-dev
-          ./configure --enable-libwebp --enable-libwebpdec --enable-gpl --enable-nonfree
+          ./configure --enable-libwebp --enable-gpl
           make -j$(nproc)
           make install DESTDIR=/src/dist
         EOT
 
     - name: Package binary
       run: |
-        tar czf ffmpeg-patched.tar.gz -C ffmpeg/dist usr/local/bin/ffmpeg
+        tar czf ffmpeg-patched.tar.gz -C ffmpeg-src/dist usr/local/bin/ffmpeg
         ls -lh ffmpeg-patched.tar.gz
 
     - name: Create Release
